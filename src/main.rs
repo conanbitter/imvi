@@ -27,6 +27,10 @@ static EXTENTIONS: phf::Set<&'static str> = phf_set!(
     "webp",
 );
 
+fn next_image(file: &PathBuf) -> Surface<'_> {
+    Surface::from_file(file).unwrap()
+}
+
 fn main() {
     let mut files: Vec<PathBuf> = vec![];
 
@@ -40,9 +44,11 @@ fn main() {
             && EXTENTIONS.contains(ext)
         {
             files.push(path.clone());
-            println!("{}", path.display());
+            //println!("{}", path.display());
         }
     }
+
+    let mut current_image: usize = 0;
 
     let sdl_context = sdl3::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -57,7 +63,7 @@ fn main() {
     let image_surface = Surface::from_file(&files[0]).unwrap();
 
     let texture_creator = canvas.texture_creator();
-    let texture = Texture::from_surface(&image_surface, &texture_creator).unwrap();
+    let mut texture = Texture::from_surface(&image_surface, &texture_creator).unwrap();
 
     canvas.set_draw_color(Color::RGB(0, 255, 255));
     canvas.clear();
@@ -75,6 +81,36 @@ fn main() {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+                Event::MouseWheel { y, .. } => {
+                    if y < 0.0 && current_image < files.len() - 1 {
+                        current_image += 1;
+                    }
+                    if y > 0.0 && current_image > 0 {
+                        current_image -= 1;
+                    }
+                    let image_surface = next_image(&files[current_image]);
+                    texture = Texture::from_surface(&image_surface, &texture_creator).unwrap();
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Right),
+                    ..
+                } => {
+                    if current_image < files.len() - 1 {
+                        current_image += 1;
+                        let image_surface = next_image(&files[current_image]);
+                        texture = Texture::from_surface(&image_surface, &texture_creator).unwrap();
+                    }
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Left),
+                    ..
+                } => {
+                    if current_image > 0 {
+                        current_image -= 1;
+                        let image_surface = next_image(&files[current_image]);
+                        texture = Texture::from_surface(&image_surface, &texture_creator).unwrap();
+                    }
+                }
                 _ => {}
             }
         }
