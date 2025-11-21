@@ -29,27 +29,27 @@ static EXTENTIONS: phf::Set<&'static str> = phf_set!(
     "webp",
 );
 
-struct FileEntry<'a> {
+struct FileEntry {
     pub filename: PathBuf,
     pub name: String,
     pub thumbnail_name: PathBuf,
-    pub thumbnail: Option<Texture<'a>>,
+    pub thumbnail: Option<Texture>,
 }
 
-struct App<'a> {
+struct App {
     sdl_context: Sdl,
     sdl_video: VideoSubsystem,
     window: Window,
     window_canvas: Canvas<Window>,
     texture_creator: TextureCreator<WindowContext>,
-    current_texture: Option<Texture<'a>>,
+    current_texture: Option<Texture>,
     current_index: usize,
-    files: Vec<FileEntry<'a>>,
+    files: Vec<FileEntry>,
     root: PathBuf,
 }
 
-impl<'a> App<'a> {
-    fn init(path: &'static str) -> anyhow::Result<App<'a>> {
+impl App {
+    fn init(path: &'static str) -> anyhow::Result<App> {
         let sdl_context = sdl3::init()?;
         let sdl_video = sdl_context.video()?;
 
@@ -92,7 +92,7 @@ impl<'a> App<'a> {
         })
     }
 
-    fn load_thumbnails(&'a mut self) {
+    fn load_thumbnails(&mut self) {
         for file in &mut self.files {
             file.thumbnail = Some(self.texture_creator.load_texture(&file.thumbnail_name).unwrap());
         }
@@ -146,7 +146,7 @@ impl<'a> App<'a> {
         Ok(())
     }
 
-    fn change_image(&mut self) -> anyhow::Result<()> {
+    pub fn change_image(&mut self) -> anyhow::Result<()> {
         self.current_texture = None;
         self.window.set_title(
             format!(
@@ -158,6 +158,20 @@ impl<'a> App<'a> {
             .as_str(),
         )?;
         //self.current_texture = self.files[self.current_index].thumbnail.as_ref();
+        let image_surface = Surface::from_file(&self.files[self.current_index].filename)?;
+        /*if self.current_texture.is_some() {
+            unsafe {
+                self.current_texture.unwrap().destroy();
+                //texture.destroy();
+            }
+            self.current_texture = None;
+        }*/
+        if self.current_texture.is_some() {
+            unsafe {
+                std::mem::take(&mut self.current_texture).unwrap().destroy();
+            };
+        }
+        self.current_texture = Some(self.texture_creator.create_texture_from_surface(&image_surface)?);
         Ok(())
     }
 
@@ -183,5 +197,6 @@ impl<'a> App<'a> {
 fn main() {
     let mut app = App::init("./test_data").unwrap();
     app.load_thumbnails();
+    app.change_image().unwrap();
     app.run().unwrap();
 }
