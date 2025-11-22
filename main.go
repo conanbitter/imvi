@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/veandco/go-sdl2/img"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
@@ -37,6 +38,19 @@ func main() {
 
 	renderer.SetDrawColor(23, 36, 42, 255)
 
+	if err := img.Init(img.INIT_JPG | img.INIT_PNG | img.INIT_TIF | img.INIT_WEBP); err != nil {
+		ShowError(err)
+		return
+	}
+	defer img.Quit()
+
+	texture, err := img.LoadTexture(renderer, "test_data/test.jpg")
+	if err != nil {
+		ShowError(err)
+		return
+	}
+	defer texture.Destroy()
+
 	running := true
 	for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
@@ -47,6 +61,9 @@ func main() {
 		}
 
 		renderer.Clear()
+
+		renderer.Copy(texture, nil, nil)
+
 		renderer.Present()
 
 		sdl.Delay(5)
