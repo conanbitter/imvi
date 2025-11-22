@@ -253,6 +253,18 @@ func main() {
 					windowHeight = int(e.Data2)
 					UpdateDisplayRect()
 				}
+			case *sdl.MouseWheelEvent:
+				if e.Y != 0 {
+					isDown := e.Y < 0
+					if e.Direction == sdl.MOUSEWHEEL_FLIPPED {
+						isDown = !isDown
+					}
+					if isDown {
+						IndexNext()
+					} else {
+						IndexPrev()
+					}
+				}
 			}
 		}
 
