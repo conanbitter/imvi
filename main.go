@@ -138,13 +138,13 @@ func main() {
 			return filepath.SkipDir
 		} else {
 			ext := strings.ToLower(filepath.Ext(path))
-			fmt.Println(ext)
+			//fmt.Println(ext)
 			if ok := extentions[ext]; !ok {
 				return nil
 			}
 
 			name := filepath.Base(path)
-			fmt.Println(path, name)
+			//fmt.Println(path, name)
 
 			files = append(files, FileEntry{
 				name:          name,
@@ -159,6 +159,12 @@ func main() {
 		ShowError(err)
 		return
 	}
+
+	thumbnailChan = make(chan WorkerTask, len(files))
+	for i := range files {
+		LoadThumbnail(i)
+	}
+	close(thumbnailChan)
 
 	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
 		ShowError(err)
@@ -196,7 +202,7 @@ func main() {
 	defer img.Quit()
 
 	defer CleanTextures()
-	for i := range files {
+	/*for i := range files {
 		fmt.Printf("%d / %d\n", i, len(files))
 		files[i].thumbnail, err = img.LoadTexture(renderer, files[i].thumbnailFile)
 		if err != nil {
@@ -210,7 +216,7 @@ func main() {
 		}
 		files[i].thumbnailWidth = int(w)
 		files[i].thumbnailHeight = int(h)
-	}
+	}*/
 
 	defer close(taskChan)
 
@@ -221,6 +227,7 @@ func main() {
 	}
 
 	go LoadingWorker(taskChan, resultChan)
+	go ThumbnailWorker(thumbnailChan, resultChan)
 
 	running := true
 	for running {
@@ -268,24 +275,45 @@ func main() {
 			}
 		}
 
-		select {
-		case result := <-resultChan:
-			if result.err != nil {
-				ShowError(err)
-				return
+		limit := 10
+		for limit > 0 {
+			select {
+			case result := <-resultChan:
+				if result.err != nil {
+					ShowError(err)
+					return
+				}
+				if !result.is_thumbnail && result.index != current_index {
+					break
+				}
+				texture, err := renderer.CreateTextureFromSurface(result.surface)
+				w := int(result.surface.W)
+				h := int(result.surface.H)
+				result.surface.Free()
+				if err != nil {
+					ShowError(err)
+					return
+				}
+
+				if result.is_thumbnail {
+					files[result.index].thumbnail = texture
+					files[result.index].thumbnailWidth = w
+					files[result.index].thumbnailHeight = h
+					//fmt.Printf("%d / %d\n", result.index, len(files))
+					if result.index == current_index {
+						UpdateDisplayRect()
+					}
+					limit--
+				} else {
+					current_texture = texture
+					textureWidth = w
+					textureHeight = h
+					UpdateDisplayRect()
+					limit = 0
+				}
+			default:
+				limit = 0
 			}
-			if result.index == current_index {
-				current_texture, err = renderer.CreateTextureFromSurface(result.surface)
-				textureWidth = int(result.surface.W)
-				textureHeight = int(result.surface.H)
-				UpdateDisplayRect()
-			}
-			result.surface.Free()
-			if err != nil {
-				ShowError(err)
-				return
-			}
-		default:
 		}
 
 		renderer.Clear()

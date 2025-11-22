@@ -8,10 +8,9 @@ import (
 )
 
 type WorkerTask struct {
-	filename     string
-	index        int
-	is_thumbnail bool
-	generation   uint64
+	filename   string
+	index      int
+	generation uint64
 }
 
 type WorkerResult struct {
@@ -23,6 +22,7 @@ type WorkerResult struct {
 
 const MAX_TASKS = 10
 
+var thumbnailChan chan WorkerTask
 var taskChan chan WorkerTask = make(chan WorkerTask, MAX_TASKS)
 var resultChan chan WorkerResult = make(chan WorkerResult, MAX_TASKS)
 var generation uint64
@@ -32,7 +32,7 @@ func LoadingWorker(tasks <-chan WorkerTask, results chan<- WorkerResult) {
 		if task.generation == atomic.LoadUint64(&generation) {
 			surface, err := img.Load(task.filename)
 			results <- WorkerResult{
-				is_thumbnail: task.is_thumbnail,
+				is_thumbnail: false,
 				index:        task.index,
 				surface:      surface,
 				err:          err,
@@ -41,11 +41,30 @@ func LoadingWorker(tasks <-chan WorkerTask, results chan<- WorkerResult) {
 	}
 }
 
+func ThumbnailWorker(tasks <-chan WorkerTask, results chan<- WorkerResult) {
+	for task := range tasks {
+		surface, err := img.Load(task.filename)
+		results <- WorkerResult{
+			is_thumbnail: true,
+			index:        task.index,
+			surface:      surface,
+			err:          err,
+		}
+	}
+}
+
 func LoadImage() {
 	taskChan <- WorkerTask{
-		filename:     files[current_index].filename,
-		index:        current_index,
-		is_thumbnail: false,
-		generation:   atomic.AddUint64(&generation, 1),
+		filename:   files[current_index].filename,
+		index:      current_index,
+		generation: atomic.AddUint64(&generation, 1),
+	}
+}
+
+func LoadThumbnail(index int) {
+	thumbnailChan <- WorkerTask{
+		filename:   files[index].thumbnailFile,
+		index:      index,
+		generation: 0,
 	}
 }
