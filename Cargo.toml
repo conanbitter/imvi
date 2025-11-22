@@ -6,8 +6,4 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.100"
 phf = { version = "0.13.1", features = ["macros"] }
-sdl3 = { version = "0.16.2", features = [
-    "build-from-source",
-    "image",
-    "unsafe_textures",
-] }
+sdl3 = { version = "0.16.2", features = ["build-from-source", "image"] }

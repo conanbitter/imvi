@@ -8,7 +8,7 @@ use sdl3::surface::Surface;
 use sdl3::video::{Window, WindowContext};
 use sdl3::{Sdl, VideoSubsystem};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Duration;
 
 static EXTENTIONS: phf::Set<&'static str> = phf_set!(
@@ -29,26 +29,26 @@ static EXTENTIONS: phf::Set<&'static str> = phf_set!(
     "webp",
 );
 
-struct FileEntry {
+struct FileEntry<'a> {
     pub filename: PathBuf,
     pub name: String,
     pub thumbnail_name: PathBuf,
-    pub thumbnail: Option<Texture>,
+    pub thumbnail: Option<Texture<'a>>,
 }
 
-struct App {
+struct App<'a> {
     sdl_context: Sdl,
     sdl_video: VideoSubsystem,
     window: Window,
     window_canvas: Canvas<Window>,
     texture_creator: TextureCreator<WindowContext>,
-    current_texture: Option<Texture>,
+    current_texture: Option<Texture<'a>>,
     current_index: usize,
-    files: Vec<FileEntry>,
+    files: Vec<FileEntry<'a>>,
     root: PathBuf,
 }
 
-impl App {
+impl<'a> App<'a> {
     fn init(path: &'static str) -> anyhow::Result<App> {
         let sdl_context = sdl3::init()?;
         let sdl_video = sdl_context.video()?;
@@ -111,23 +111,23 @@ impl App {
                     } => break 'running,
                     Event::MouseWheel { y, .. } => {
                         if y < 0.0 {
-                            self.next_index();
+                            self.next_index()?;
                         }
                         if y > 0.0 {
-                            self.prev_index();
+                            self.prev_index()?;
                         }
                     }
                     Event::KeyDown {
                         keycode: Some(Keycode::Right),
                         ..
                     } => {
-                        self.next_index();
+                        self.next_index()?;
                     }
                     Event::KeyDown {
                         keycode: Some(Keycode::Left),
                         ..
                     } => {
-                        self.prev_index();
+                        self.prev_index()?;
                     }
                     _ => {}
                 }
@@ -166,11 +166,6 @@ impl App {
             }
             self.current_texture = None;
         }*/
-        if self.current_texture.is_some() {
-            unsafe {
-                std::mem::take(&mut self.current_texture).unwrap().destroy();
-            };
-        }
         self.current_texture = Some(self.texture_creator.create_texture_from_surface(&image_surface)?);
         Ok(())
     }
