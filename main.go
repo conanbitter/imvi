@@ -68,36 +68,28 @@ func CleanTextures() {
 	}
 }
 
-func ChangeImage() error {
-	//var err error
+func ChangeImage() {
 	if current_texture != nil {
 		current_texture.Destroy()
 		current_texture = nil
 	}
-	/*current_texture, err = img.LoadTexture(renderer, files[current_index].filename)
-	if err != nil {
-		return err
-	}*/
 	LoadImage()
 	window.SetTitle(fmt.Sprintf("[%d/%d] %s - imvi", current_index+1, len(files), files[current_index].name))
 	UpdateDisplayRect()
-	return nil
 }
 
-func IndexNext() error {
+func IndexNext() {
 	if current_index < len(files)-1 {
 		current_index++
-		return ChangeImage()
+		ChangeImage()
 	}
-	return nil
 }
 
-func IndexPrev() error {
+func IndexPrev() {
 	if current_index > 0 {
 		current_index--
-		return ChangeImage()
+		ChangeImage()
 	}
-	return nil
 }
 
 func UpdateDisplayRect() {
@@ -138,13 +130,11 @@ func main() {
 			return filepath.SkipDir
 		} else {
 			ext := strings.ToLower(filepath.Ext(path))
-			//fmt.Println(ext)
 			if ok := extentions[ext]; !ok {
 				return nil
 			}
 
 			name := filepath.Base(path)
-			//fmt.Println(path, name)
 
 			files = append(files, FileEntry{
 				name:          name,
@@ -177,8 +167,8 @@ func main() {
 		"imvi",
 		sdl.WINDOWPOS_CENTERED,
 		sdl.WINDOWPOS_CENTERED,
-		800,
-		600,
+		int32(windowWidth),
+		int32(windowHeight),
 		sdl.WINDOW_RESIZABLE)
 	if err != nil {
 		ShowError(err)
@@ -202,29 +192,9 @@ func main() {
 	defer img.Quit()
 
 	defer CleanTextures()
-	/*for i := range files {
-		fmt.Printf("%d / %d\n", i, len(files))
-		files[i].thumbnail, err = img.LoadTexture(renderer, files[i].thumbnailFile)
-		if err != nil {
-			ShowError(err)
-			return
-		}
-		_, _, w, h, err := files[i].thumbnail.Query()
-		if err != nil {
-			ShowError(err)
-			return
-		}
-		files[i].thumbnailWidth = int(w)
-		files[i].thumbnailHeight = int(h)
-	}*/
-
 	defer close(taskChan)
 
-	err = ChangeImage()
-	if err != nil {
-		ShowError(err)
-		return
-	}
+	ChangeImage()
 
 	go LoadingWorker(taskChan, resultChan)
 	go ThumbnailWorker(thumbnailChan, resultChan)
@@ -241,17 +211,9 @@ func main() {
 					case sdl.SCANCODE_ESCAPE:
 						running = false
 					case sdl.SCANCODE_RIGHT:
-						err = IndexNext()
-						if err != nil {
-							ShowError(err)
-							return
-						}
+						IndexNext()
 					case sdl.SCANCODE_LEFT:
-						err = IndexPrev()
-						if err != nil {
-							ShowError(err)
-							return
-						}
+						IndexPrev()
 					}
 				}
 			case *sdl.WindowEvent:
@@ -299,7 +261,6 @@ func main() {
 					files[result.index].thumbnail = texture
 					files[result.index].thumbnailWidth = w
 					files[result.index].thumbnailHeight = h
-					//fmt.Printf("%d / %d\n", result.index, len(files))
 					if result.index == current_index {
 						UpdateDisplayRect()
 					}
