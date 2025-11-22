@@ -60,13 +60,19 @@ func CleanTextures() {
 }
 
 func ChangeImage() error {
-	var err error
+	//var err error
 	if current_texture != nil {
 		current_texture.Destroy()
+		current_texture = nil
 	}
-	current_texture, err = img.LoadTexture(renderer, files[current_index].filename)
+	/*current_texture, err = img.LoadTexture(renderer, files[current_index].filename)
 	if err != nil {
 		return err
+	}*/
+	taskChan <- WorkerTask{
+		filename:     files[current_index].filename,
+		index:        current_index,
+		is_thumbnail: false,
 	}
 	window.SetTitle(fmt.Sprintf("[%d/%d] %s - imvi", current_index+1, len(files), files[current_index].name))
 	return nil
@@ -168,11 +174,15 @@ func main() {
 		}
 	}
 
+	defer close(taskChan)
+
 	err = ChangeImage()
 	if err != nil {
 		ShowError(err)
 		return
 	}
+
+	go LoadingWorker(taskChan, resultChan)
 
 	running := true
 	for running {
@@ -200,6 +210,23 @@ func main() {
 					}
 				}
 			}
+		}
+
+		select {
+		case result := <-resultChan:
+			if result.err != nil {
+				ShowError(err)
+				return
+			}
+			if result.index == current_index {
+				current_texture, err = renderer.CreateTextureFromSurface(result.surface)
+			}
+			result.surface.Free()
+			if err != nil {
+				ShowError(err)
+				return
+			}
+		default:
 		}
 
 		renderer.Clear()
