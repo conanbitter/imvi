@@ -11,10 +11,12 @@ import (
 )
 
 type FileEntry struct {
-	name           string
-	filename       string
-	thumbnail_file string
-	thumbnail      *sdl.Texture
+	name            string
+	filename        string
+	thumbnailFile   string
+	thumbnail       *sdl.Texture
+	thumbnailWidth  int
+	thumbnailHeight int
 }
 
 var extentions map[string]bool = map[string]bool{
@@ -44,6 +46,13 @@ var files []FileEntry = make([]FileEntry, 0)
 var window *sdl.Window
 var renderer *sdl.Renderer
 
+var displayRect sdl.Rect
+var windowWidth int = 800
+var windowHeight int = 600
+var windowAR float32 = float32(windowWidth) / float32(windowHeight)
+var textureWidth int = 1
+var textureHeight int = 1
+
 func ShowError(err error) {
 	sdl.ShowSimpleMessageBox(sdl.MESSAGEBOX_ERROR, "Error", err.Error(), nil)
 }
@@ -71,6 +80,7 @@ func ChangeImage() error {
 	}*/
 	LoadImage()
 	window.SetTitle(fmt.Sprintf("[%d/%d] %s - imvi", current_index+1, len(files), files[current_index].name))
+	UpdateDisplayRect()
 	return nil
 }
 
@@ -88,6 +98,31 @@ func IndexPrev() error {
 		return ChangeImage()
 	}
 	return nil
+}
+
+func UpdateDisplayRect() {
+	width := 1
+	height := 1
+	if current_texture != nil {
+		width = textureWidth
+		height = textureHeight
+	} else if files[current_index].thumbnail != nil {
+		width = files[current_index].thumbnailWidth
+		height = files[current_index].thumbnailHeight
+	}
+
+	imageAR := float32(width) / float32(height)
+	if imageAR < windowAR {
+		displayRect.H = int32(windowHeight)
+		displayRect.Y = 0
+		displayRect.W = int32(float32(windowHeight) * imageAR)
+		displayRect.X = (int32(windowWidth) - displayRect.W) / 2
+	} else {
+		displayRect.W = int32(windowWidth)
+		displayRect.X = 0
+		displayRect.H = int32(float32(windowWidth) / imageAR)
+		displayRect.Y = (int32(windowHeight) - displayRect.H) / 2
+	}
 }
 
 func main() {
@@ -112,10 +147,10 @@ func main() {
 			fmt.Println(path, name)
 
 			files = append(files, FileEntry{
-				name:           name,
-				filename:       path,
-				thumbnail_file: filepath.Join(filepath.Dir(path), "_preview", name),
-				thumbnail:      nil,
+				name:          name,
+				filename:      path,
+				thumbnailFile: filepath.Join(filepath.Dir(path), "_preview", name),
+				thumbnail:     nil,
 			})
 		}
 		return nil
@@ -163,11 +198,18 @@ func main() {
 	defer CleanTextures()
 	for i := range files {
 		fmt.Printf("%d / %d\n", i, len(files))
-		files[i].thumbnail, err = img.LoadTexture(renderer, files[i].thumbnail_file)
+		files[i].thumbnail, err = img.LoadTexture(renderer, files[i].thumbnailFile)
 		if err != nil {
 			ShowError(err)
 			return
 		}
+		_, _, w, h, err := files[i].thumbnail.Query()
+		if err != nil {
+			ShowError(err)
+			return
+		}
+		files[i].thumbnailWidth = int(w)
+		files[i].thumbnailHeight = int(h)
 	}
 
 	defer close(taskChan)
@@ -205,6 +247,12 @@ func main() {
 						}
 					}
 				}
+			case *sdl.WindowEvent:
+				if e.Event == sdl.WINDOWEVENT_RESIZED {
+					windowWidth = int(e.Data1)
+					windowHeight = int(e.Data2)
+					UpdateDisplayRect()
+				}
 			}
 		}
 
@@ -216,6 +264,9 @@ func main() {
 			}
 			if result.index == current_index {
 				current_texture, err = renderer.CreateTextureFromSurface(result.surface)
+				textureWidth = int(result.surface.W)
+				textureHeight = int(result.surface.H)
+				UpdateDisplayRect()
 			}
 			result.surface.Free()
 			if err != nil {
@@ -228,9 +279,9 @@ func main() {
 		renderer.Clear()
 
 		if current_texture != nil {
-			renderer.Copy(current_texture, nil, nil)
+			renderer.Copy(current_texture, nil, &displayRect)
 		} else if files[current_index].thumbnail != nil {
-			renderer.Copy(files[current_index].thumbnail, nil, nil)
+			renderer.Copy(files[current_index].thumbnail, nil, &displayRect)
 		}
 
 		renderer.Present()
