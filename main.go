@@ -69,11 +69,7 @@ func ChangeImage() error {
 	if err != nil {
 		return err
 	}*/
-	taskChan <- WorkerTask{
-		filename:     files[current_index].filename,
-		index:        current_index,
-		is_thumbnail: false,
-	}
+	LoadImage()
 	window.SetTitle(fmt.Sprintf("[%d/%d] %s - imvi", current_index+1, len(files), files[current_index].name))
 	return nil
 }
