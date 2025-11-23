@@ -7,7 +7,7 @@ import (
 )
 
 const TILE_SIZE int = 200
-const TILE_BORDER int = 2
+const TILE_BORDER int = 4
 const TILE_INNER_SIZE int = TILE_SIZE - TILE_BORDER*2
 const SCROLL_SIZE int = 100
 
@@ -20,6 +20,8 @@ var gridYOffset = 0
 var gridXOffset = 0
 
 var gridMode bool = false
+
+var gridHoverIndex int = -1
 
 func GetTileSize(width int, height int) (int, int, int, int) {
 	var w, h int
@@ -68,10 +70,17 @@ func DrawGrid(renderer *sdl.Renderer) {
 			if index >= len(files) {
 				break
 			}
-			rect.W = int32(files[index].tileWidth)
-			rect.H = int32(files[index].tileHeight)
-			rect.X = int32(files[index].tileX + TILE_SIZE*x + gridXOffset)
-			rect.Y = int32(itemOffset + files[index].tileY + TILE_SIZE*y)
+			if index == gridHoverIndex {
+				rect.W = int32(files[index].tileWidth + TILE_BORDER*4)
+				rect.H = int32(files[index].tileHeight + TILE_BORDER*4)
+				rect.X = int32(files[index].tileX + TILE_SIZE*x + gridXOffset - TILE_BORDER*2)
+				rect.Y = int32(itemOffset + files[index].tileY + TILE_SIZE*y - TILE_BORDER*2)
+			} else {
+				rect.W = int32(files[index].tileWidth)
+				rect.H = int32(files[index].tileHeight)
+				rect.X = int32(files[index].tileX + TILE_SIZE*x + gridXOffset)
+				rect.Y = int32(itemOffset + files[index].tileY + TILE_SIZE*y)
+			}
 			renderer.Copy(files[index].thumbnail, nil, &rect)
 			index++
 		}
@@ -95,6 +104,7 @@ func ScrollGrid(down bool) {
 		gridYOffset -= SCROLL_SIZE
 	}
 	ClampGridOffset()
+	gridHoverIndex = -1
 }
 
 func ScrollFromCurrent() {
@@ -114,4 +124,8 @@ func GetIndexFromXY(x, y int) int {
 		return -1
 	}
 	return index
+}
+
+func UpdateHover(x, y int) {
+	gridHoverIndex = GetIndexFromXY(x, y)
 }

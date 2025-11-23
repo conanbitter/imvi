@@ -300,11 +300,14 @@ func main() {
 							UpdateDisplayRect()
 						} else {
 							ScrollFromCurrent()
+							UpdateHover(int(e.X), int(e.Y))
 						}
 					}
 				}
 			case *sdl.MouseMotionEvent:
-				if zooming {
+				if gridMode {
+					UpdateHover(int(e.X), int(e.Y))
+				} else if zooming {
 					mouseX = int(e.X)
 					mouseY = int(e.Y)
 					UpdateDisplayRect()
