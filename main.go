@@ -17,6 +17,10 @@ type FileEntry struct {
 	thumbnail       *sdl.Texture
 	thumbnailWidth  int
 	thumbnailHeight int
+	tileWidth       int
+	tileHeight      int
+	tileX           int
+	tileY           int
 }
 
 var extentions map[string]bool = map[string]bool{
@@ -224,6 +228,7 @@ func main() {
 	defer close(taskChan)
 
 	ChangeImage()
+	UpdateGridSize()
 
 	go LoadingWorker(taskChan, resultChan)
 	go ThumbnailWorker(thumbnailChan, resultChan)
@@ -250,6 +255,7 @@ func main() {
 					windowWidth = int(e.Data1)
 					windowHeight = int(e.Data2)
 					UpdateDisplayRect()
+					UpdateGridSize()
 				}
 			case *sdl.MouseWheelEvent:
 				if e.Y != 0 {
@@ -257,10 +263,14 @@ func main() {
 					if e.Direction == sdl.MOUSEWHEEL_FLIPPED {
 						isDown = !isDown
 					}
-					if isDown {
-						IndexNext()
+					if gridMode {
+						ScrollGrid(isDown)
 					} else {
-						IndexPrev()
+						if isDown {
+							IndexNext()
+						} else {
+							IndexPrev()
+						}
 					}
 				}
 			case *sdl.MouseButtonEvent:
@@ -274,7 +284,7 @@ func main() {
 							UpdateDisplayRect()
 						}
 					case sdl.BUTTON_RIGHT:
-						fmt.Println("Click right")
+						gridMode = !gridMode
 					}
 				}
 			case *sdl.MouseMotionEvent:
@@ -310,6 +320,15 @@ func main() {
 					files[result.index].thumbnail = texture
 					files[result.index].thumbnailWidth = w
 					files[result.index].thumbnailHeight = h
+					tw, th, tx, ty := GetTileSize(w, h)
+					files[result.index].tileWidth = tw
+					files[result.index].tileHeight = th
+					files[result.index].tileX = tx
+					files[result.index].tileY = ty
+					if result.index == 0 {
+						fmt.Println(files[result.index])
+					}
+
 					if result.index == current_index {
 						UpdateDisplayRect()
 					}
@@ -328,10 +347,14 @@ func main() {
 
 		renderer.Clear()
 
-		if current_texture != nil {
-			renderer.Copy(current_texture, nil, &displayRect)
-		} else if files[current_index].thumbnail != nil {
-			renderer.Copy(files[current_index].thumbnail, nil, &displayRect)
+		if gridMode {
+			DrawGrid(renderer)
+		} else {
+			if current_texture != nil {
+				renderer.Copy(current_texture, nil, &displayRect)
+			} else if files[current_index].thumbnail != nil {
+				renderer.Copy(files[current_index].thumbnail, nil, &displayRect)
+			}
 		}
 
 		renderer.Present()
