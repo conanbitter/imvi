@@ -1,5 +1,5 @@
 # imvi
-Just another **im**age **vi**ewer. Main goal is to be extremely responsive without significant freezing an stuttering during loading and image scrolling.
+Just another **im**age **vi**ewer. Main goal is to be extremely responsive without significant freezing and stuttering during loading and image scrolling.
 
 ## Notes on compiling on Windows
 - use [TDM-GCC](https://github.com/jmeubank/tdm-gcc) (tutorial [here](https://gist.github.com/glycerine/355121fc4cc525b81d057d3882673531))
@@ -7,6 +7,6 @@ Just another **im**age **vi**ewer. Main goal is to be extremely responsive witho
 
 ## TODO
 - [ ] loaded images caching
-- [ ] image zooming
+- [X] image zooming
 - [ ] gallery view
 - [ ] thumbnail make in app

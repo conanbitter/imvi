@@ -53,6 +53,10 @@ var windowAR float32 = float32(windowWidth) / float32(windowHeight)
 var textureWidth int = 1
 var textureHeight int = 1
 
+var zooming bool = false
+var mouseX int = 0
+var mouseY int = 0
+
 func ShowError(err error) {
 	sdl.ShowSimpleMessageBox(sdl.MESSAGEBOX_ERROR, "Error", err.Error(), nil)
 }
@@ -75,6 +79,7 @@ func ChangeImage() {
 	}
 	LoadImage()
 	window.SetTitle(fmt.Sprintf("[%d/%d] %s - imvi", current_index+1, len(files), files[current_index].name))
+	zooming = false
 	UpdateDisplayRect()
 }
 
@@ -90,6 +95,22 @@ func IndexPrev() {
 		current_index--
 		ChangeImage()
 	}
+}
+
+func FloatClamp01(val float32) float32 {
+	if val > 1.0 {
+		return 1.0
+	} else if val < 0.0 {
+		return 0.0
+	} else {
+		return val
+	}
+}
+
+func GetRectCoords(rect *sdl.Rect, x int, y int) (fx float32, fy float32) {
+	fx = FloatClamp01(float32(x-int(rect.X)) / float32(rect.W))
+	fy = FloatClamp01(float32(y-int(rect.Y)) / float32(rect.H))
+	return
 }
 
 func UpdateDisplayRect() {
@@ -114,6 +135,14 @@ func UpdateDisplayRect() {
 		displayRect.X = 0
 		displayRect.H = int32(float32(windowWidth) / imageAR)
 		displayRect.Y = (int32(windowHeight) - displayRect.H) / 2
+	}
+
+	if zooming {
+		fx, fy := GetRectCoords(&displayRect, mouseX, mouseY)
+		displayRect.W = int32(textureWidth)
+		displayRect.H = int32(textureHeight)
+		displayRect.X = int32(-fx * float32(textureWidth-windowWidth))
+		displayRect.Y = int32(-fy * float32(textureHeight-windowHeight))
 	}
 }
 
@@ -233,6 +262,26 @@ func main() {
 					} else {
 						IndexPrev()
 					}
+				}
+			case *sdl.MouseButtonEvent:
+				if e.Type == sdl.MOUSEBUTTONDOWN {
+					switch e.Button {
+					case sdl.BUTTON_LEFT:
+						if current_texture != nil {
+							zooming = !zooming
+							mouseX = int(e.X)
+							mouseY = int(e.Y)
+							UpdateDisplayRect()
+						}
+					case sdl.BUTTON_RIGHT:
+						fmt.Println("Click right")
+					}
+				}
+			case *sdl.MouseMotionEvent:
+				if zooming {
+					mouseX = int(e.X)
+					mouseY = int(e.Y)
+					UpdateDisplayRect()
 				}
 			}
 		}
