@@ -7,6 +7,8 @@ import (
 )
 
 const TILE_SIZE int = 200
+const TILE_BORDER int = 2
+const TILE_INNER_SIZE int = TILE_SIZE - TILE_BORDER*2
 const SCROLL_SIZE int = 100
 
 var colCount = 1
@@ -22,25 +24,32 @@ var gridMode bool = false
 func GetTileSize(width int, height int) (int, int, int, int) {
 	var w, h int
 	if width > height {
-		w = TILE_SIZE
-		h = height * TILE_SIZE / width
+		w = TILE_INNER_SIZE
+		h = height * TILE_INNER_SIZE / width
 	} else if width < height {
-		w = width * TILE_SIZE / height
-		h = TILE_SIZE
+		w = width * TILE_INNER_SIZE / height
+		h = TILE_INNER_SIZE
 	} else {
-		w = TILE_SIZE
-		h = TILE_SIZE
+		w = TILE_INNER_SIZE
+		h = TILE_INNER_SIZE
 	}
-	return w, h, (TILE_SIZE - w) / 2, (TILE_SIZE - h) / 2
+	return w, h, (TILE_SIZE-w)/2 + TILE_BORDER, (TILE_SIZE-h)/2 + TILE_BORDER
 }
 
 func UpdateGridSize() {
+	currentRow := gridYOffset / TILE_SIZE
+	leftTile := currentRow * colCount
+
 	colCount = windowWidth / TILE_SIZE
 	rowCount = int(math.Ceil(float64(len(files)) / float64(colCount)))
 	rowCountVisible = int(math.Ceil(float64(windowHeight)/float64(TILE_SIZE))) + 1
-	gridYOffset = 0
+
 	gridXOffset = (windowWidth - TILE_SIZE*colCount) / 2
 	maxYOffset = rowCount*TILE_SIZE - windowHeight
+
+	currentRow = leftTile / colCount
+	gridYOffset = TILE_SIZE * currentRow
+	ClampGridOffset()
 	//fmt.Println(colCount, rowCountVisible)
 }
 
@@ -70,16 +79,26 @@ func DrawGrid(renderer *sdl.Renderer) {
 
 }
 
+func ClampGridOffset() {
+	if gridYOffset > maxYOffset {
+		gridYOffset = maxYOffset
+	}
+	if gridYOffset < 0 {
+		gridYOffset = 0
+	}
+}
+
 func ScrollGrid(down bool) {
 	if down {
 		gridYOffset += SCROLL_SIZE
-		if gridYOffset > maxYOffset {
-			gridYOffset = maxYOffset
-		}
 	} else {
 		gridYOffset -= SCROLL_SIZE
-		if gridYOffset < 0 {
-			gridYOffset = 0
-		}
 	}
+	ClampGridOffset()
+}
+
+func ScrollFromCurrent() {
+	currentRow := current_index / colCount
+	gridYOffset = TILE_SIZE * currentRow
+	ClampGridOffset()
 }

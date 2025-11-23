@@ -285,6 +285,12 @@ func main() {
 						}
 					case sdl.BUTTON_RIGHT:
 						gridMode = !gridMode
+						if !gridMode {
+							zooming = false
+							UpdateDisplayRect()
+						} else {
+							ScrollFromCurrent()
+						}
 					}
 				}
 			case *sdl.MouseMotionEvent:
