@@ -1,2 +1,2 @@
 go build -o bin
-bin\imvi.exe
+bin\imvi.exe test_data

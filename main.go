@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -151,7 +152,26 @@ func UpdateDisplayRect() {
 }
 
 func main() {
-	root := "test_data"
+	root := ""
+	openedFile := ""
+	isFileOpened := false
+	if len(os.Args) > 1 {
+		file := os.Args[1]
+		info, err := os.Stat(file)
+		if err != nil {
+			ShowError(err)
+			return
+		}
+		if info.IsDir() {
+			root = file
+			current_index = 0
+		} else {
+			root = filepath.Dir(file)
+			openedFile = file
+			isFileOpened = true
+		}
+	}
+
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -168,6 +188,10 @@ func main() {
 			}
 
 			name := filepath.Base(path)
+
+			if isFileOpened && path == openedFile {
+				current_index = len(files)
+			}
 
 			files = append(files, FileEntry{
 				name:          name,
@@ -344,9 +368,6 @@ func main() {
 					files[result.index].tileHeight = th
 					files[result.index].tileX = tx
 					files[result.index].tileY = ty
-					if result.index == 0 {
-						fmt.Println(files[result.index])
-					}
 
 					if result.index == current_index {
 						UpdateDisplayRect()
