@@ -109,8 +109,12 @@ func ScrollGrid(down bool) {
 
 func ScrollFromCurrent() {
 	currentRow := current_index / colCount
-	gridYOffset = TILE_SIZE*currentRow - (windowHeight-TILE_SIZE)/2
-	ClampGridOffset()
+	newGridYOffset := TILE_SIZE * currentRow
+	if newGridYOffset < gridYOffset || newGridYOffset > gridYOffset+windowHeight {
+		gridYOffset = newGridYOffset - (windowHeight-TILE_SIZE)/2
+		ClampGridOffset()
+	}
+
 }
 
 func GetIndexFromXY(x, y int) int {
