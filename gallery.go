@@ -99,6 +99,19 @@ func ScrollGrid(down bool) {
 
 func ScrollFromCurrent() {
 	currentRow := current_index / colCount
-	gridYOffset = TILE_SIZE * currentRow
+	gridYOffset = TILE_SIZE*currentRow - (windowHeight-TILE_SIZE)/2
 	ClampGridOffset()
+}
+
+func GetIndexFromXY(x, y int) int {
+	if x < gridXOffset || x > gridXOffset+TILE_SIZE*colCount {
+		return -1
+	}
+	col := (x - gridXOffset) / TILE_SIZE
+	row := (y + gridYOffset) / TILE_SIZE
+	index := col + row*colCount
+	if index < 0 || index >= len(files) {
+		return -1
+	}
+	return index
 }

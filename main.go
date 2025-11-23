@@ -277,11 +277,21 @@ func main() {
 				if e.Type == sdl.MOUSEBUTTONDOWN {
 					switch e.Button {
 					case sdl.BUTTON_LEFT:
-						if current_texture != nil {
-							zooming = !zooming
-							mouseX = int(e.X)
-							mouseY = int(e.Y)
-							UpdateDisplayRect()
+						if gridMode {
+							index := GetIndexFromXY(int(e.X), int(e.Y))
+							if index >= 0 {
+								gridMode = false
+								zooming = false
+								current_index = index
+								ChangeImage()
+							}
+						} else {
+							if current_texture != nil {
+								zooming = !zooming
+								mouseX = int(e.X)
+								mouseY = int(e.Y)
+								UpdateDisplayRect()
+							}
 						}
 					case sdl.BUTTON_RIGHT:
 						gridMode = !gridMode
