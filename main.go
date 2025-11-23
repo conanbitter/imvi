@@ -84,8 +84,7 @@ func ChangeImage() {
 	}
 	LoadImage()
 	window.SetTitle(fmt.Sprintf("[%d/%d] %s - imvi", current_index+1, len(files), files[current_index].name))
-	zooming = false
-	UpdateDisplayRect()
+	SetZoomMode(false)
 }
 
 func IndexNext() {
@@ -148,6 +147,16 @@ func UpdateDisplayRect() {
 		displayRect.H = int32(textureHeight)
 		displayRect.X = int32(-fx * float32(textureWidth-windowWidth))
 		displayRect.Y = int32(-fy * float32(textureHeight-windowHeight))
+	}
+}
+
+func SetZoomMode(mode bool) {
+	zooming = mode
+	UpdateDisplayRect()
+	if zooming {
+		sdl.ShowCursor(sdl.DISABLE)
+	} else {
+		sdl.ShowCursor(sdl.ENABLE)
 	}
 }
 
@@ -305,24 +314,21 @@ func main() {
 							index := GetIndexFromXY(int(e.X), int(e.Y))
 							if index >= 0 {
 								gridMode = false
-								zooming = false
 								current_index = index
 								ChangeImage()
 							}
 						} else {
 							if current_texture != nil {
-								zooming = !zooming
 								mouseX = int(e.X)
 								mouseY = int(e.Y)
+								SetZoomMode(!zooming)
 								UpdateDisplayRect()
 							}
 						}
 					case sdl.BUTTON_RIGHT:
 						gridMode = !gridMode
-						if !gridMode {
-							zooming = false
-							UpdateDisplayRect()
-						} else {
+						SetZoomMode(false)
+						if gridMode {
 							ScrollFromCurrent()
 							UpdateHover(int(e.X), int(e.Y))
 						}
