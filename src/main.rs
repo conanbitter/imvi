@@ -1,40 +1,18 @@
-use phf::phf_set;
 use sdl3::event::Event;
-use sdl3::image::{LoadSurface, LoadTexture};
+use sdl3::image::LoadSurface;
 use sdl3::keyboard::Keycode;
 use sdl3::pixels::Color;
 use sdl3::render::{Canvas, Texture, TextureCreator};
 use sdl3::surface::Surface;
 use sdl3::video::{Window, WindowContext};
 use sdl3::{Sdl, VideoSubsystem};
-use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;
 
-static EXTENTIONS: phf::Set<&'static str> = phf_set!(
-    "cur",
-    "ico",
-    "bmp",
-    "pnm",
-    "xpm",
-    "xcf",
-    "pcx",
-    "gif",
-    "jpg" | "jpeg",
-    "tif" | "tiff",
-    "png",
-    "tga",
-    "lbm",
-    "xv",
-    "webp",
-);
+use crate::files::{FileEntry, load_filelist};
 
-struct FileEntry {
-    pub filename: PathBuf,
-    pub name: String,
-    pub thumbnail_name: PathBuf,
-    pub thumbnail: Option<Texture>,
-}
+mod files;
+mod images;
 
 struct App {
     sdl_context: Sdl,
@@ -58,25 +36,6 @@ impl App {
         window_canvas.set_draw_color(Color::RGB(23, 36, 42));
 
         let root = PathBuf::from(path);
-        let mut files: Vec<FileEntry> = vec![];
-
-        for entry in fs::read_dir(&root)? {
-            let path = entry?.path();
-            if path.is_file()
-                && let Some(ext) = path.extension()
-                && let Some(ext) = ext.to_str()
-                && EXTENTIONS.contains(ext)
-            {
-                let thumbnail_name = root.join("_preview").join(path.file_name().unwrap());
-                files.push(FileEntry {
-                    filename: path.clone(),
-                    //thumbnail: Some(result.texture_creator.load_texture(&thumbnail_name).unwrap()),
-                    thumbnail_name,
-                    name: path.file_name().unwrap().to_str().unwrap().into(),
-                    thumbnail: None,
-                });
-            }
-        }
 
         Ok(App {
             sdl_context,
@@ -87,14 +46,14 @@ impl App {
 
             current_texture: None,
             current_index: 0,
-            files,
+            files: load_filelist(&PathBuf::from(path))?,
             root: root.clone(),
         })
     }
 
     fn load_thumbnails(&mut self) {
         for file in &mut self.files {
-            file.thumbnail = Some(self.texture_creator.load_texture(&file.thumbnail_name).unwrap());
+            //file.thumbnail = Some(self.texture_creator.load_texture(&file.thumbnail_name).unwrap());
         }
     }
 
@@ -136,7 +95,7 @@ impl App {
             self.window_canvas.clear();
             if let Some(ref texture) = self.current_texture {
                 self.window_canvas.copy(texture, None, None).unwrap();
-            } else if let Some(ref texture) = self.files[self.current_index].thumbnail {
+            } else if let Some(ref texture) = self.files[self.current_index].thumbnail.image {
                 self.window_canvas.copy(texture, None, None).unwrap();
             }
             self.window_canvas.present();
