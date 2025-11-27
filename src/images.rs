@@ -30,6 +30,15 @@ impl Image {
             }
         }
     }
+
+    pub fn load(&mut self, surface: Surface, creator: &TextureCreator<WindowContext>) -> anyhow::Result<()> {
+        self.clear();
+        self.width = surface.width();
+        self.height = surface.height();
+        self.aspect_ratio = self.width as f64 / self.height as f64;
+        self.image = Some(creator.create_texture_from_surface(surface)?);
+        Ok(())
+    }
 }
 
 impl Default for Image {

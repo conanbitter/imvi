@@ -9,55 +9,53 @@ use sdl3::{Sdl, VideoSubsystem};
 use std::path::PathBuf;
 use std::time::Duration;
 
-use crate::files::{FileEntry, load_filelist};
+use crate::files::ImageViewer;
 
 mod files;
 mod images;
 
-struct App {
+struct AppState {
     sdl_context: Sdl,
     sdl_video: VideoSubsystem,
     window: Window,
     window_canvas: Canvas<Window>,
     texture_creator: TextureCreator<WindowContext>,
-    current_texture: Option<Texture>,
-    current_index: usize,
-    files: Vec<FileEntry>,
+    viewer: ImageViewer,
     root: PathBuf,
 }
 
-impl App {
-    fn init(path: &'static str) -> anyhow::Result<App> {
+impl AppState {
+    fn init(path: &'static str) -> anyhow::Result<AppState> {
         let sdl_context = sdl3::init()?;
         let sdl_video = sdl_context.video()?;
 
-        let window = sdl_video.window("imvi", 800, 600).position_centered().build()?;
+        let window = sdl_video
+            .window("imvi", 800, 600)
+            .position_centered()
+            .resizable()
+            .build()?;
         let mut window_canvas = window.clone().into_canvas();
         window_canvas.set_draw_color(Color::RGB(23, 36, 42));
 
         let root = PathBuf::from(path);
+        let viewer = ImageViewer::load(&root)?;
 
-        Ok(App {
+        Ok(AppState {
             sdl_context,
             sdl_video,
             window,
             texture_creator: window_canvas.texture_creator(),
             window_canvas,
 
-            current_texture: None,
-            current_index: 0,
-            files: load_filelist(&PathBuf::from(path))?,
+            viewer,
             root: root.clone(),
         })
     }
 
-    fn load_thumbnails(&mut self) {
-        for file in &mut self.files {
-            //file.thumbnail = Some(self.texture_creator.load_texture(&file.thumbnail_name).unwrap());
-        }
-    }
-
     fn run(&mut self) -> anyhow::Result<()> {
+        self.viewer.load_thumbnails(&self.texture_creator)?;
+        self.viewer.change_image(&self.texture_creator)?;
+
         let mut event_pump = self.sdl_context.event_pump()?;
 
         'running: loop {
@@ -70,83 +68,39 @@ impl App {
                     } => break 'running,
                     Event::MouseWheel { y, .. } => {
                         if y < 0.0 {
-                            self.next_index()?;
+                            self.viewer.next(&self.texture_creator)?;
                         }
                         if y > 0.0 {
-                            self.prev_index()?;
+                            self.viewer.prev(&self.texture_creator)?;
                         }
                     }
                     Event::KeyDown {
                         keycode: Some(Keycode::Right),
                         ..
                     } => {
-                        self.next_index()?;
+                        self.viewer.next(&self.texture_creator)?;
                     }
                     Event::KeyDown {
                         keycode: Some(Keycode::Left),
                         ..
                     } => {
-                        self.prev_index()?;
+                        self.viewer.prev(&self.texture_creator)?;
                     }
                     _ => {}
                 }
             }
 
             self.window_canvas.clear();
-            if let Some(ref texture) = self.current_texture {
-                self.window_canvas.copy(texture, None, None).unwrap();
-            } else if let Some(ref texture) = self.files[self.current_index].thumbnail.image {
-                self.window_canvas.copy(texture, None, None).unwrap();
-            }
+            self.viewer.draw(&mut self.window_canvas)?;
             self.window_canvas.present();
             ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
         }
 
         Ok(())
     }
-
-    pub fn change_image(&mut self) -> anyhow::Result<()> {
-        self.window.set_title(
-            format!(
-                "[{}/{}] {} - imvi",
-                self.current_index,
-                self.files.len(),
-                self.files[self.current_index].name
-            )
-            .as_str(),
-        )?;
-        let image_surface = Surface::from_file(&self.files[self.current_index].filename)?;
-        if let Some(texture) = self.current_texture.take() {
-            unsafe {
-                texture.destroy();
-            }
-        }
-        self.current_texture = Some(self.texture_creator.create_texture_from_surface(&image_surface)?);
-        Ok(())
-    }
-
-    fn next_index(&mut self) -> anyhow::Result<()> {
-        if self.current_index < self.files.len() - 1 {
-            self.current_index += 1;
-            self.change_image()?;
-        }
-        Ok(())
-    }
-
-    fn prev_index(&mut self) -> anyhow::Result<()> {
-        if self.current_index > 0 {
-            self.current_index -= 1;
-            self.change_image()?;
-        }
-        Ok(())
-    }
-
-    //let image_surface = next_image(&files[current_image].filename);
 }
 
 fn main() {
-    let mut app = App::init("./test_data").unwrap();
-    app.load_thumbnails();
-    app.change_image().unwrap();
+    let mut app = AppState::init("./test_data").unwrap();
     app.run().unwrap();
 }
