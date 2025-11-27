@@ -4,7 +4,7 @@ use phf::phf_set;
 use sdl3::{
     image::LoadSurface,
     rect::Rect,
-    render::{Canvas, TextureCreator},
+    render::{Canvas, Texture, TextureCreator},
     surface::Surface,
     video::{Window, WindowContext},
 };
@@ -38,10 +38,9 @@ pub struct FileEntry {
 }
 
 pub struct ImageViewer {
-    files: Vec<FileEntry>,
-    index: usize,
+    pub files: Vec<FileEntry>,
+    pub index: usize,
     image: Image,
-    view_rect: Rect,
 }
 
 impl ImageViewer {
@@ -68,7 +67,6 @@ impl ImageViewer {
             files,
             index: 0,
             image: Image::default(),
-            view_rect: Rect::new(0, 0, 1, 1),
         })
     }
 
@@ -89,20 +87,61 @@ impl ImageViewer {
         Ok(())
     }
 
-    pub fn next(&mut self, creator: &TextureCreator<WindowContext>) -> anyhow::Result<()> {
-        if self.index < self.files.len() - 1 {
-            self.index += 1;
-            self.change_image(creator)?;
+    pub fn get_texture(&self) -> Option<&Texture> {
+        if let Some(ref texture) = self.image.image {
+            Some(texture)
+        } else if let Some(ref texture) = self.files[self.index].thumbnail.image {
+            Some(texture)
+        } else {
+            None
         }
-        Ok(())
     }
 
-    pub fn prev(&mut self, creator: &TextureCreator<WindowContext>) -> anyhow::Result<()> {
+    pub fn get_image(&self) -> &Image {
+        if self.image.image.is_some() {
+            &self.image
+        } else {
+            &self.files[self.index].thumbnail
+        }
+    }
+
+    pub fn next(&mut self) -> bool {
+        if self.index < self.files.len() - 1 {
+            self.index += 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn prev(&mut self) -> bool {
         if self.index > 0 {
             self.index -= 1;
-            self.change_image(creator)?;
+            true
+        } else {
+            false
         }
-        Ok(())
+    }
+
+    pub fn update_image(
+        &mut self,
+        index: usize,
+        surface: Surface,
+        creator: &TextureCreator<WindowContext>,
+    ) -> anyhow::Result<()> {
+        if index != self.index {
+            return Ok(());
+        }
+        self.image.load(surface, creator)
+    }
+
+    pub fn update_thumbnail(
+        &mut self,
+        index: usize,
+        surface: Surface,
+        creator: &TextureCreator<WindowContext>,
+    ) -> anyhow::Result<()> {
+        self.files[index].thumbnail.load(surface, creator)
     }
 
     pub fn change_image(&mut self, creator: &TextureCreator<WindowContext>) -> anyhow::Result<()> {

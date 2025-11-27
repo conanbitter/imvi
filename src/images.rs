@@ -8,7 +8,7 @@ pub struct Image {
     pub image: Option<Texture>,
     pub width: u32,
     pub height: u32,
-    pub aspect_ratio: f64,
+    pub aspect_ratio: f32,
 }
 
 impl Image {
@@ -19,7 +19,7 @@ impl Image {
             image: Some(creator.create_texture_from_surface(surface)?),
             width,
             height,
-            aspect_ratio: width as f64 / height as f64,
+            aspect_ratio: width as f32 / height as f32,
         })
     }
 
@@ -35,7 +35,7 @@ impl Image {
         self.clear();
         self.width = surface.width();
         self.height = surface.height();
-        self.aspect_ratio = self.width as f64 / self.height as f64;
+        self.aspect_ratio = self.width as f32 / self.height as f32;
         self.image = Some(creator.create_texture_from_surface(surface)?);
         Ok(())
     }
