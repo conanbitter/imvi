@@ -13,6 +13,7 @@ use crate::files::ImageViewer;
 
 mod files;
 mod images;
+mod window;
 
 struct AppState {
     sdl_context: Sdl,
@@ -159,6 +160,8 @@ impl AppState {
 }
 
 fn main() {
-    let mut app = AppState::init("./test_data").unwrap();
-    app.run().unwrap();
+    //let mut app = AppState::init("./test_data").unwrap();
+    //app.run().unwrap();
+    let mut window = window::Window::init(800, 600).unwrap();
+    window.run().unwrap();
 }
