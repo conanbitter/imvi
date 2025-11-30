@@ -3,13 +3,14 @@ use std::{fs, path::PathBuf};
 use phf::phf_set;
 use sdl3::{
     image::LoadSurface,
-    rect::Rect,
-    render::{Canvas, Texture, TextureCreator},
+    render::{Texture, TextureCreator},
     surface::Surface,
-    video::{Window, WindowContext},
+    video::WindowContext,
 };
 
 use crate::images::Image;
+use crate::window::Rect;
+use crate::window::Window;
 
 static EXTENTIONS: phf::Set<&'static str> = phf_set!(
     "cur",
@@ -32,19 +33,20 @@ static EXTENTIONS: phf::Set<&'static str> = phf_set!(
 pub struct FileEntry {
     pub filename: PathBuf,
     pub name: String,
-    pub thumbnail_file: PathBuf,
+    thumbnail_file: PathBuf,
     pub thumbnail: Image,
     pub tile_rect: Rect,
 }
 
-pub struct ImageViewer {
+pub struct ImageContainer {
+    pub root: PathBuf,
     pub files: Vec<FileEntry>,
     pub index: usize,
     image: Image,
 }
 
-impl ImageViewer {
-    pub fn load(root: &PathBuf) -> anyhow::Result<ImageViewer> {
+impl ImageContainer {
+    pub fn load(root: &PathBuf) -> anyhow::Result<ImageContainer> {
         let mut files: Vec<FileEntry> = vec![];
         for entry in fs::read_dir(root)? {
             let path = entry?.path();
@@ -59,30 +61,22 @@ impl ImageViewer {
                     name: path.file_name().unwrap().to_str().unwrap().into(),
                     thumbnail_file,
                     thumbnail: Image::default(),
-                    tile_rect: Rect::new(0, 0, 1, 1),
+                    tile_rect: Rect::new(0.0, 0.0, 1.0, 1.0),
                 });
             }
         }
-        Ok(ImageViewer {
+        Ok(ImageContainer {
+            root: root.clone(),
             files,
             index: 0,
             image: Image::default(),
         })
     }
 
-    pub fn load_thumbnails(&mut self, creator: &TextureCreator<WindowContext>) -> anyhow::Result<()> {
+    pub fn load_thumbnails(&mut self, window: &Window) -> anyhow::Result<()> {
         for file in &mut self.files {
             let image_surface = Surface::from_file(&file.thumbnail_file)?;
-            file.thumbnail.load(image_surface, creator)?;
-        }
-        Ok(())
-    }
-
-    pub fn draw(&self, canvas: &mut Canvas<Window>) -> anyhow::Result<()> {
-        if let Some(ref texture) = self.image.image {
-            canvas.copy(texture, None, None)?;
-        } else if let Some(ref texture) = self.files[self.index].thumbnail.image {
-            canvas.copy(texture, None, None)?;
+            file.thumbnail.load(image_surface, &window.texture_creator)?;
         }
         Ok(())
     }
@@ -123,16 +117,11 @@ impl ImageViewer {
         }
     }
 
-    pub fn update_image(
-        &mut self,
-        index: usize,
-        surface: Surface,
-        creator: &TextureCreator<WindowContext>,
-    ) -> anyhow::Result<()> {
+    pub fn update_image(&mut self, index: usize, surface: Surface, window: &Window) -> anyhow::Result<()> {
         if index != self.index {
             return Ok(());
         }
-        self.image.load(surface, creator)
+        self.image.load(surface, &window.texture_creator)
     }
 
     pub fn update_thumbnail(
@@ -144,7 +133,7 @@ impl ImageViewer {
         self.files[index].thumbnail.load(surface, creator)
     }
 
-    pub fn change_image(&mut self, creator: &TextureCreator<WindowContext>) -> anyhow::Result<()> {
+    pub fn change_image(&mut self, window: &Window) -> anyhow::Result<()> {
         /*self.window.set_title(
             format!(
                 "[{}/{}] {} - imvi",
@@ -155,7 +144,7 @@ impl ImageViewer {
             .as_str(),
         )?;*/
         let image_surface = Surface::from_file(&self.files[self.index].filename)?;
-        self.image.load(image_surface, creator)?;
+        self.image.load(image_surface, &window.texture_creator)?;
         Ok(())
     }
 }
